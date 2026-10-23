@@ -13,7 +13,7 @@ export function createArena(scene) {
   scene.add(box);
 
 
-  // 🐰 うさぎさんを作る
+  // 🐰 うさぎさんをつくる
   const bunny = new THREE.Group();
 
   const white = new THREE.MeshStandardMaterial({
