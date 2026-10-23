@@ -1,6 +1,6 @@
 import * as THREE from "three";
 
-// アリーナの3Dオブジェクトを作る
+// アリーナの3Dオブジェクトをつくる
 export function createArena(scene) {
   const geometry = new THREE.BoxGeometry(4, 2, 3);
 
