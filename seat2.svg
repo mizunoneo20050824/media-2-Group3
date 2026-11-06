@@ -1,0 +1,104 @@
+
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 700 540">
+
+  <style>
+    .block {
+      fill: #dce7f2;
+      stroke: #42617f;
+      stroke-width: 2;
+      cursor: pointer;
+      transition: fill 0.15s;
+    }
+
+    .block:hover {
+      fill: #91bce5;
+    }
+
+    .block text {
+      fill: #263c53;
+      font-size: 22px;
+      font-weight: bold;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      pointer-events: none;
+    }
+
+    .court {
+      fill: #d9a66c;
+      stroke: #80552d;
+      stroke-width: 3;
+    }
+
+    .court-line {
+      fill: none;
+      stroke: #ffffff;
+      stroke-width: 2;
+    }
+  </style>
+
+  <rect width="700" height="540" fill="#f5f6f8"/>
+
+  <!-- A1 -->
+  <g class="block" data-block="A1">
+    <rect x="180" y="35" width="340" height="90" rx="5"/>
+    <text x="350" y="80">A1</text>
+  </g>
+
+  <!-- A2 -->
+  <g class="block" data-block="A2">
+    <rect x="180" y="415" width="340" height="90" rx="5"/>
+    <text x="350" y="460">A2</text>
+  </g>
+
+  <!-- B1 -->
+  <g class="block" data-block="B1">
+    <rect x="25" y="180" width="120" height="180" rx="5"/>
+    <text x="85" y="270">B1</text>
+  </g>
+
+  <!-- B2 -->
+  <g class="block" data-block="B2">
+    <rect x="555" y="180" width="120" height="180" rx="5"/>
+    <text x="615" y="270">B2</text>
+  </g>
+
+  <!-- Court -->
+  <rect class="court"
+        x="220" y="170"
+        width="260" height="200"/>
+
+  <rect class="court-line"
+        x="235" y="185"
+        width="230" height="170"/>
+
+  <line class="court-line"
+        x1="350" y1="185"
+        x2="350" y2="355"/>
+
+  <circle class="court-line"
+          cx="350" cy="270" r="35"/>
+
+  <circle class="court-line"
+          cx="350" cy="270" r="5"/>
+
+  <!-- Goal areas -->
+  <rect class="court-line"
+        x="305" y="185"
+        width="90" height="45"/>
+
+  <rect class="court-line"
+        x="305" y="310"
+        width="90" height="45"/>
+
+  <text x="350" y="155"
+        font-size="14"
+        text-anchor="middle"
+        fill="#555">COURT</text>
+
+  <text x="350" y="525"
+        font-size="12"
+        text-anchor="middle"
+        fill="#777">NOVA ARENA</text>
+
+</svg>

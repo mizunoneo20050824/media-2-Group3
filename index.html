@@ -9,9 +9,156 @@
       margin: 0;
       overflow: hidden;
     }
+    #seat-map-container {
+      position: fixed;
+      z-index: 1;
+      top: 16px;
+      left: 16px;
+      display: grid;
+      place-items: center;
+      box-sizing: border-box;
+      width: min(280px, 32vw, 36vh);
+      aspect-ratio: 1;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid #c8d1da;
+      border-radius: 10px;
+      box-shadow: 0 3px 14px rgba(28, 45, 60, 0.16);
+    }
+    #seat-map-container svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    #seat-map-container[hidden], #seat-view-back[hidden] {
+      display: none;
+    }
+    #seat-map-container.is-detail {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      width: min(1100px, 92vw);
+      height: min(850px, 88vh);
+      max-height: none;
+      overflow: hidden;
+    }
+    #seat-map-container.is-detail[hidden] {
+      display: none;
+    }
+    .seat-map-header {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
+      background: rgba(255, 255, 255, 0.96);
+      color: #20384c;
+      font: 14px/1.2 system-ui, sans-serif;
+    }
+    .seat-map-header strong { flex: 1; }
+    .seat-map-header span { color: #586b7b; font-size: 12px; }
+    .map-back, #seat-view-back {
+      border: 0;
+      border-radius: 6px;
+      padding: 7px 9px;
+      background: #315878;
+      color: white;
+      font: 600 13px/1.2 system-ui, sans-serif;
+      cursor: pointer;
+    }
+    .detail-block {
+      fill: #9ec5e8;
+      stroke: #315878;
+      stroke-width: 1.5;
+      stroke-linejoin: round;
+    }
+    #seat-map-container.is-detail svg {
+      flex: 1 1 auto;
+      width: 100%;
+      height: 0;
+      min-height: 0;
+    }
+    .court-side-label {
+      fill: #a33e20;
+      font-size: 10px;
+      font-weight: 800;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      paint-order: stroke;
+      stroke: #fff;
+      stroke-width: 2px;
+      stroke-linejoin: round;
+      pointer-events: none;
+    }
+    @media (max-width: 600px) {
+      #seat-map-container.is-detail {
+        width: 96vw;
+        height: 86vh;
+      }
+      .seat-map-header { gap: 6px; padding: 7px; font-size: 12px; }
+      .map-back { padding: 6px 7px; font-size: 12px; }
+    }
+    .seat-marker {
+      fill: #315878;
+      stroke: white;
+      stroke-width: 0.8;
+      cursor: pointer;
+    }
+    .seat-marker:hover { fill: #f39b52; }
+    #seat-view-back {
+      position: fixed;
+      z-index: 2;
+      top: 16px;
+      left: 16px;
+      box-shadow: 0 3px 14px rgba(28, 45, 60, 0.2);
+    }
+    #orbit-controls {
+      position: fixed;
+      z-index: 2;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 5px;
+    }
+    #orbit-toggle {
+      padding: 10px 16px;
+      border: 0;
+      border-radius: 8px;
+      background: #315878;
+      color: white;
+      font: 600 14px/1.2 system-ui, sans-serif;
+      box-shadow: 0 3px 14px rgba(28, 45, 60, 0.2);
+      cursor: pointer;
+    }
+    #orbit-toggle[aria-pressed="false"] {
+      background: #687784;
+    }
+    #orbit-hint {
+      margin: 0;
+      padding: 4px 7px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.88);
+      color: #34495a;
+      font: 12px/1.2 system-ui, sans-serif;
+      box-shadow: 0 2px 8px rgba(28, 45, 60, 0.12);
+    }
+    canvas { display: block; cursor: grab; }
+    canvas:active { cursor: grabbing; }
   </style>
 </head>
 <body>
+  <div id="seat-map-container" aria-label="座席ブロック図"></div>
+  <button id="seat-view-back" type="button" hidden>座席選択へ戻る</button>
+  <div id="orbit-controls">
+    <button id="orbit-toggle" type="button" aria-pressed="true">周回モード：ON</button>
+    <p id="orbit-hint" hidden>座席を選択してください</p>
+  </div>
   <script type="importmap">
       {
         "imports": {

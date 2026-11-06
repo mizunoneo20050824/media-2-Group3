@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 700 540"
+     width="100%">
+
+  <style>
+    .block {
+      fill: #9ec5e8;
+      stroke: #315878;
+      stroke-width: 2;
+      cursor: pointer;
+      transition: fill 0.2s;
+    }
+    .block:hover {
+      fill: #f5c66b;
+    }
+    .block.selected {
+      fill: #f39b52;
+      stroke: #a84d17;
+      stroke-width: 4;
+    }
+    .label {
+      font-size: 19px;
+      fill: #20384c;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      pointer-events: none;
+      font-weight: bold;
+    }
+  </style>
+
+  <rect width="700" height="540" rx="15"
+        fill="#f1f4f7"/>
+
+  <!-- 上側ブロック -->
+  <g class="block" data-block="A1">
+    <rect x="65" y="35" width="125" height="65" rx="8"/>
+    <text x="127" y="67" class="label">A1</text>
+  </g>
+  <g class="block" data-block="A2">
+    <rect x="205" y="35" width="125" height="65" rx="8"/>
+    <text x="267" y="67" class="label">A2</text>
+  </g>
+  <g class="block" data-block="A3">
+    <rect x="370" y="35" width="125" height="65" rx="8"/>
+    <text x="432" y="67" class="label">A3</text>
+  </g>
+  <g class="block" data-block="A4">
+    <rect x="510" y="35" width="125" height="65" rx="8"/>
+    <text x="572" y="67" class="label">A4</text>
+  </g>
+
+  <!-- 左側ブロック -->
+  <g class="block" data-block="B1">
+    <rect x="35" y="125" width="100" height="105" rx="8"/>
+    <text x="85" y="177" class="label">B1</text>
+  </g>
+  <g class="block" data-block="B2">
+    <rect x="35" y="245" width="100" height="105" rx="8"/>
+    <text x="85" y="297" class="label">B2</text>
+  </g>
+
+  <!-- 右側ブロック -->
+  <g class="block" data-block="C1">
+    <rect x="565" y="125" width="100" height="105" rx="8"/>
+    <text x="615" y="177" class="label">C1</text>
+  </g>
+  <g class="block" data-block="C2">
+    <rect x="565" y="245" width="100" height="105" rx="8"/>
+    <text x="615" y="297" class="label">C2</text>
+  </g>
+
+  <!-- 下側ブロック -->
+  <g class="block" data-block="D1">
+    <rect x="65" y="390" width="125" height="65" rx="8"/>
+    <text x="127" y="422" class="label">D1</text>
+  </g>
+  <g class="block" data-block="D2">
+    <rect x="205" y="390" width="125" height="65" rx="8"/>
+    <text x="267" y="422" class="label">D2</text>
+  </g>
+  <g class="block" data-block="D3">
+    <rect x="370" y="390" width="125" height="65" rx="8"/>
+    <text x="432" y="422" class="label">D3</text>
+  </g>
+  <g class="block" data-block="D4">
+    <rect x="510" y="390" width="125" height="65" rx="8"/>
+    <text x="572" y="422" class="label">D4</text>
+  </g>
+
+  <!-- コート -->
+  <rect x="155" y="125" width="390" height="225"
+        rx="5" fill="#d9b47c"
+        stroke="#80603c" stroke-width="3"/>
+
+  <line x1="350" y1="125" x2="350" y2="350"
+        stroke="white" stroke-width="2"/>
+  <circle cx="350" cy="237" r="38"
+          fill="none" stroke="white" stroke-width="2"/>
+  <rect x="155" y="190" width="65" height="95"
+        fill="none" stroke="white" stroke-width="2"/>
+  <rect x="480" y="190" width="65" height="95"
+        fill="none" stroke="white" stroke-width="2"/>
+
+  <text x="350" y="242" font-size="24"
+        text-anchor="middle" fill="#604a30"
+        font-weight="bold">COURT</text>
+
+</svg>

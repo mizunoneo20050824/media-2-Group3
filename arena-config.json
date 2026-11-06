@@ -1,0 +1,7 @@
+{
+  "formatVersion": 1,
+  "arenaId": "nova-arena",
+  "name": "NOVA ARENA",
+  "module": "./arena3.js",
+  "seatMap": "./seat3.svg"
+}

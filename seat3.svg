@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1500">
+  <style>
+    .block { fill: #343d4a; stroke: #8494a8; stroke-width: 2; cursor: pointer; transition: fill 0.15s; }
+    .block:hover { fill: #557da7; }
+    .block text { fill: #fff; font-size: 13px; font-weight: bold; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+    .court { fill: #c99a65; stroke: #79532f; stroke-width: 3; }
+    .court-line { fill: none; stroke: #fff; stroke-width: 2; }
+    .label { fill: #59616b; font-size: 16px; text-anchor: middle; font-weight: bold; }
+  </style>
+
+  <rect width="1500" height="1500" fill="#f0f2f5"/>
+
+  <!-- The arena map uses 12 SVG units per metre, centered at (750, 750). -->
+
+  <text class="label" x="750" y="243.2">NORTH UPPER</text>
+  <g class="block" data-block="N-U1"><rect x="522.12" y="274.2" width="139.92" height="156"/><text x="592.08" y="352.2">N-U1</text></g>
+  <g class="block" data-block="N-U2"><rect x="680.04" y="274.2" width="139.92" height="156"/><text x="750" y="352.2">N-U2</text></g>
+  <g class="block" data-block="N-U3"><rect x="837.96" y="274.2" width="139.92" height="156"/><text x="907.92" y="352.2">N-U3</text></g>
+
+  <text class="label" x="750" y="439.2">NORTH LOWER</text>
+  <g class="block" data-block="N-L1"><rect x="531.66" y="448.2" width="133.56" height="162"/><text x="598.44" y="529.2">N-L1</text></g>
+  <g class="block" data-block="N-L2"><rect x="683.22" y="448.2" width="133.56" height="162"/><text x="750" y="529.2">N-L2</text></g>
+  <g class="block" data-block="N-L3"><rect x="834.78" y="448.2" width="133.56" height="162"/><text x="901.56" y="529.2">N-L3</text></g>
+
+  <text class="label" x="750" y="1060.8">SOUTH LOWER</text>
+  <g class="block" data-block="S-L1"><rect x="531.66" y="889.8" width="133.56" height="162"/><text x="598.44" y="970.8">S-L1</text></g>
+  <g class="block" data-block="S-L2"><rect x="683.22" y="889.8" width="133.56" height="162"/><text x="750" y="970.8">S-L2</text></g>
+  <g class="block" data-block="S-L3"><rect x="834.78" y="889.8" width="133.56" height="162"/><text x="901.56" y="970.8">S-L3</text></g>
+
+  <text class="label" x="750" y="1251.8">SOUTH UPPER</text>
+  <g class="block" data-block="S-U1"><rect x="522.12" y="1069.8" width="139.92" height="156"/><text x="592.08" y="1147.8">S-U1</text></g>
+  <g class="block" data-block="S-U2"><rect x="680.04" y="1069.8" width="139.92" height="156"/><text x="750" y="1147.8">S-U2</text></g>
+  <g class="block" data-block="S-U3"><rect x="837.96" y="1069.8" width="139.92" height="156"/><text x="907.92" y="1147.8">S-U3</text></g>
+
+  <text class="label" x="303.3" y="480">WEST UPPER</text>
+  <g class="block" data-block="W-U1"><rect x="221.40" y="588.36" width="163.80" height="152.64"/><text x="303.30" y="664.68">W-U1</text></g>
+  <g class="block" data-block="W-U2"><rect x="221.40" y="759" width="163.80" height="152.64"/><text x="303.30" y="835.32">W-U2</text></g>
+
+  <text class="label" x="458.4" y="480">WEST LOWER</text>
+  <g class="block" data-block="W-L1"><rect x="386.40" y="613.80" width="144" height="127.20"/><text x="458.40" y="677.40">W-L1</text></g>
+  <g class="block" data-block="W-L2"><rect x="386.40" y="759" width="144" height="127.20"/><text x="458.40" y="822.60">W-L2</text></g>
+
+  <text class="label" x="1196.7" y="480">EAST UPPER</text>
+  <g class="block" data-block="E-U1"><rect x="1114.80" y="588.36" width="163.80" height="152.64"/><text x="1196.70" y="664.68">E-U1</text></g>
+  <g class="block" data-block="E-U2"><rect x="1114.80" y="759" width="163.80" height="152.64"/><text x="1196.70" y="835.32">E-U2</text></g>
+
+  <text class="label" x="1041.6" y="480">EAST LOWER</text>
+  <g class="block" data-block="E-L1"><rect x="969.60" y="613.80" width="144" height="127.20"/><text x="1041.60" y="677.40">E-L1</text></g>
+  <g class="block" data-block="E-L2"><rect x="969.60" y="759" width="144" height="127.20"/><text x="1041.60" y="822.60">E-L2</text></g>
+
+  <!-- 3D court: 28 m x 15 m, mapped at 12 SVG units per metre. -->
+  <rect class="court" x="582" y="660" width="336" height="180" rx="3"/>
+  <rect class="court-line" x="582" y="660" width="336" height="180"/>
+  <line class="court-line" x1="750" y1="660" x2="750" y2="840"/>
+  <circle class="court-line" cx="750" cy="750" r="21.6"/>
+  <circle class="court-line" cx="750" cy="750" r="2.5"/>
+  <text class="label" x="750" y="870">COURT</text>
+</svg>
