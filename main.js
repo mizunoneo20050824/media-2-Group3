@@ -1,443 +1,254 @@
 import * as THREE from "three";
 import { OrbitControls } from
   "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js";
+import { GLTFLoader } from
+  "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/GLTFLoader.js";
 
-const ARENA_CONFIG_URL = "./arena-config.json";
-
+const MODEL_URL = "./test.glb";
+const MAP_URL = "./seat-map.svg";
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf0f3f7);
 
-const camera = new THREE.PerspectiveCamera(
-  60,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-);
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 2000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-const orbitToggle = document.querySelector("#orbit-toggle");
-const orbitHint = document.querySelector("#orbit-hint");
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 4;
+controls.maxDistance = 500;
+controls.zoomSpeed = 1.5;
 const seatMap = document.querySelector("#seat-map-container");
 const seatViewBack = document.querySelector("#seat-view-back");
-
-const cameraGoal = new THREE.Vector3();
-const targetGoal = new THREE.Vector3();
-const cameraStart = new THREE.Vector3();
-const targetStart = new THREE.Vector3();
+const orbitControls = document.querySelector("#orbit-controls");
+const orbitToggle = document.querySelector("#orbit-toggle");
+const orbitHint = document.querySelector("#orbit-hint");
 let model = null;
-let arenaMetadata = null;
-let initialCameraPosition = null;
-let initialCameraTarget = null;
-let moveStartedAt = 0;
-let movingToSeat = false;
-let orbitMode = true;
-let seatView = false;
+let mapSvg = "";
 let arenaReady = false;
-let lookDragging = false;
+let seatView = false;
+let orbitMode = true;
+let pointerDown = false;
 let lastPointerX = 0;
 let lastPointerY = 0;
-let lookYaw = 0;
-let lookPitch = 0;
-let originalSeatMapSvg = "";
-let currentBlockId = null;
-let enforcingFloorLimit = false;
-let requestedArenaName = "アリーナ";
+let yaw = 0;
+let pitch = 0;
+let activeBlock = null;
+let moveStartPosition = new THREE.Vector3();
+let moveStartTarget = new THREE.Vector3();
+let seatPosition = new THREE.Vector3();
+let seatTarget = new THREE.Vector3();
+let moveStartedAt = 0;
+let movingToSeat = false;
 
-controls.addEventListener("change", () => {
-  const floorHeight = arenaMetadata && arenaMetadata.floorTopY;
-  if (!orbitMode || seatView || enforcingFloorLimit ||
-      !Number.isFinite(floorHeight)) return;
+const tiers = {
+  T1: { label: "下段", innerX: 55, innerZ: 90, outerX: 76, outerZ: 112, y: 2.5, rise: 1.1 },
+  T2: { label: "中段", innerX: 66, innerZ: 100, outerX: 87, outerZ: 123, y: 12, rise: 1.45 },
+  T3: { label: "上段", innerX: 82, innerZ: 115, outerX: 105, outerZ: 137, y: 23, rise: 2.7 }
+};
+const sectors = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 
-  const targetBelowFloor = Math.max(0, floorHeight - controls.target.y);
-  const cameraBelowFloor = Math.max(0, floorHeight - camera.position.y);
-  if (targetBelowFloor === 0 && cameraBelowFloor === 0) return;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x88909a, 2));
+const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
+keyLight.position.set(-80, 120, 90);
+scene.add(keyLight);
 
-  enforcingFloorLimit = true;
-  controls.target.y += targetBelowFloor;
-  camera.position.y += targetBelowFloor;
-  camera.position.y = Math.max(camera.position.y, floorHeight);
-  camera.lookAt(controls.target);
-  controls.update();
-  enforcingFloorLimit = false;
-});
-
-function updateOrbitButton() {
-  orbitToggle.textContent = "周回モード：" + (orbitMode ? "ON" : "OFF");
+function updateControlsUi() {
+  orbitToggle.textContent = `回転操作: ${orbitMode ? "ON" : "OFF"}`;
   orbitToggle.setAttribute("aria-pressed", String(orbitMode));
-  orbitToggle.disabled = !arenaReady;
-  orbitHint.hidden = !orbitMode;
-  seatViewBack.disabled = movingToSeat;
-  controls.enabled = arenaReady && orbitMode && !movingToSeat && !seatView;
+  orbitToggle.disabled = !arenaReady || seatView;
+  orbitHint.hidden = !orbitMode || seatView;
+  controls.enabled = arenaReady && orbitMode && !seatView && !movingToSeat;
 }
 
-orbitToggle.addEventListener("click", () => {
-  const shouldReturnToOverview = !orbitMode;
-  orbitMode = true;
-  if (shouldReturnToOverview && initialCameraPosition && initialCameraTarget) {
-    currentBlockId = null;
-    showOverview();
-    camera.position.copy(initialCameraPosition);
-    controls.target.copy(initialCameraTarget);
-    camera.lookAt(controls.target);
-    controls.update();
+function loadMap() {
+  fetch(MAP_URL)
+    .then((response) => {
+      if (!response.ok) throw new Error(`座席図の読み込みに失敗しました: ${response.status}`);
+      return response.text();
+    })
+    .then((svg) => {
+      mapSvg = svg;
+      showOverview();
+    })
+    .catch((error) => showMapError(error));
+}
+
+function showMapError(error) {
+  console.error(error);
+  seatMap.hidden = false;
+  seatMap.textContent = error.message;
+}
+
+function showOverview() {
+  seatView = false;
+  movingToSeat = false;
+  activeBlock = null;
+  seatMap.classList.remove("is-detail");
+  seatMap.hidden = false;
+  seatViewBack.hidden = true;
+  seatMap.innerHTML = mapSvg;
+  seatMap.querySelectorAll("[data-block]").forEach((block) => {
+    block.addEventListener("click", () => showBlock(block.dataset.block, block));
+  });
+  updateControlsUi();
+}
+
+function showBlock(blockId, blockElement) {
+  if (!arenaReady) return;
+  activeBlock = blockId;
+  seatMap.querySelectorAll(".block.selected").forEach((element) => element.classList.remove("selected"));
+  blockElement.classList.add("selected");
+  const tierId = blockId.slice(0, 2);
+  const sectorIndex = sectors.indexOf(blockId.slice(3));
+  if (!tiers[tierId] || sectorIndex < 0) return;
+  const tier = tiers[tierId];
+  const rowCount = 5;
+  const seatCount = 8;
+  const markers = [];
+  for (let row = 0; row < rowCount; row++) {
+    for (let col = 0; col < seatCount; col++) {
+      const index = row * seatCount + col;
+      const x = 90 + col * 74;
+      const y = 100 + row * 82;
+      const theta = seatTheta(sectorIndex, col, seatCount);
+      const t = 0.2 + row * 0.15;
+      const radii = seatRadii(tier, t);
+      const position = new THREE.Vector3(radii.x * Math.sin(theta), tier.y + row * tier.rise, -radii.z * Math.cos(theta));
+      markers.push(`<g class="seat-choice" data-seat-index="${index}" tabindex="0" role="button" aria-label="${row + 1}列 ${col + 1}番"><circle cx="${x}" cy="${y}" r="18"/><text x="${x}" y="${y + 1}">${col + 1}</text><title>${row + 1}列 ${col + 1}番</title></g>`);
+      seatPositions[index] = position;
+    }
   }
-  updateOrbitButton();
+  seatMap.classList.add("is-detail");
+  seatMap.innerHTML = `<div class="seat-map-header"><button class="map-back" type="button">ブロック図へ戻る</button><strong>${blockId} の座席</strong><span>${rowCount}列・${seatCount}席（試作）</span></div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 540" role="group" aria-label="${blockId} 座席図"><style>.seat-choice circle{fill:#9ec5e8;stroke:#315878;stroke-width:2;cursor:pointer}.seat-choice:hover circle,.seat-choice:focus circle{fill:#f39b52}.seat-choice text{font:700 12px system-ui,sans-serif;fill:#20384c;text-anchor:middle;dominant-baseline:middle;pointer-events:none}.row-label{font:14px system-ui,sans-serif;fill:#586b7b;text-anchor:end;dominant-baseline:middle}</style><text x="350" y="38" text-anchor="middle" font-family="system-ui" font-weight="700">フィールド側</text>${Array.from({ length: rowCount }, (_, row) => `<text class="row-label" x="62" y="${101 + row * 82}">${row + 1}列</text>`).join("")}${markers.join("")}</svg>`;
+  seatMap.querySelector(".map-back").addEventListener("click", showOverview);
+  seatMap.querySelectorAll("[data-seat-index]").forEach((seat) => {
+    seat.addEventListener("click", () => enterSeat(Number(seat.dataset.seatIndex)));
+    seat.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") enterSeat(Number(seat.dataset.seatIndex));
+    });
+  });
+  updateControlsUi();
+}
+
+const seatPositions = [];
+function seatTheta(sectorIndex, col, count) {
+  const center = sectorIndex * Math.PI / 4;
+  const spread = Math.PI / 4 * 0.72;
+  return center - spread / 2 + spread * col / (count - 1);
+}
+function seatRadii(tier, t) {
+  return { x: tier.innerX + (tier.outerX - tier.innerX) * t, z: tier.innerZ + (tier.outerZ - tier.innerZ) * t };
+}
+
+function enterSeat(index) {
+  if (!model || !seatPositions[index]) return;
+  seatPosition.copy(seatPositions[index]);
+  seatTarget.set(0, 3, 0);
+  moveStartPosition.copy(camera.position);
+  moveStartTarget.copy(controls.target);
+  moveStartedAt = performance.now();
+  movingToSeat = true;
+  seatView = true;
+  seatMap.hidden = true;
+  seatViewBack.hidden = false;
+  seatViewBack.textContent = "座席図に戻る";
+  updateControlsUi();
+}
+
+seatViewBack.addEventListener("click", () => {
+  seatView = false;
+  movingToSeat = false;
+  seatMap.hidden = false;
+  seatViewBack.hidden = true;
+  updateControlsUi();
+});
+
+orbitToggle.addEventListener("click", () => {
+  orbitMode = !orbitMode;
+  updateControlsUi();
 });
 
 function syncLookAngles() {
   const direction = new THREE.Vector3();
   camera.getWorldDirection(direction);
-  lookYaw = Math.atan2(direction.x, direction.z);
-  lookPitch = Math.asin(THREE.MathUtils.clamp(direction.y, -1, 1));
+  yaw = Math.atan2(direction.x, direction.z);
+  pitch = Math.asin(THREE.MathUtils.clamp(direction.y, -1, 1));
 }
-
 function applyLookDirection() {
-  const direction = new THREE.Vector3(
-    Math.sin(lookYaw) * Math.cos(lookPitch),
-    Math.sin(lookPitch),
-    Math.cos(lookYaw) * Math.cos(lookPitch)
-  );
+  const direction = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
   camera.lookAt(camera.position.clone().add(direction));
 }
-
 renderer.domElement.addEventListener("pointerdown", (event) => {
   if (!seatView || movingToSeat || event.button !== 0) return;
-  lookDragging = true;
+  pointerDown = true;
   lastPointerX = event.clientX;
   lastPointerY = event.clientY;
+  syncLookAngles();
   renderer.domElement.setPointerCapture(event.pointerId);
 });
-
 renderer.domElement.addEventListener("pointermove", (event) => {
-  if (!lookDragging || !seatView || movingToSeat) return;
-  const deltaX = event.clientX - lastPointerX;
-  const deltaY = event.clientY - lastPointerY;
+  if (!pointerDown || !seatView || movingToSeat) return;
+  yaw += (event.clientX - lastPointerX) * 0.004;
+  pitch = THREE.MathUtils.clamp(pitch - (event.clientY - lastPointerY) * 0.004, -1.1, 1.1);
   lastPointerX = event.clientX;
   lastPointerY = event.clientY;
-  lookYaw += deltaX * 0.004;
-  lookPitch = THREE.MathUtils.clamp(
-    lookPitch - deltaY * 0.004,
-    -Math.PI / 2 + 0.05,
-    Math.PI / 2 - 0.05
-  );
   applyLookDirection();
 });
-
-function endLookDrag(event) {
-  lookDragging = false;
-  if (renderer.domElement.hasPointerCapture(event.pointerId)) {
-    renderer.domElement.releasePointerCapture(event.pointerId);
-  }
+function stopLook(event) {
+  pointerDown = false;
+  if (renderer.domElement.hasPointerCapture(event.pointerId)) renderer.domElement.releasePointerCapture(event.pointerId);
 }
-renderer.domElement.addEventListener("pointerup", endLookDrag);
-renderer.domElement.addEventListener("pointercancel", endLookDrag);
+renderer.domElement.addEventListener("pointerup", stopLook);
+renderer.domElement.addEventListener("pointercancel", stopLook);
 
-function findBlock(blockId) {
-  let result = null;
-  if (model) {
-    model.traverse((object) => {
-      if (object.userData.blockId === blockId) result = object;
-    });
-  }
-  return result;
-}
-
-function showOverview() {
-  seatView = false;
-  orbitMode = true;
-  currentBlockId = null;
-  seatMap.hidden = false;
-  seatMap.classList.remove("is-detail");
-  seatViewBack.hidden = true;
-  seatMap.innerHTML = originalSeatMapSvg;
-  seatMap.querySelectorAll("[data-block]").forEach((blockElement) => {
-    blockElement.addEventListener("click", () => {
-      const blockId = blockElement.dataset.block;
-      seatMap.querySelectorAll(".block.selected").forEach((selected) => {
-        selected.classList.remove("selected");
-      });
-      blockElement.classList.add("selected");
-      showBlockDetail(blockId);
-    });
-  });
-  updateOrbitButton();
-}
-
-function showBlockDetail(blockId) {
-  const block = findBlock(blockId);
-  const seats = block && block.userData.seats;
-  if (!block || !Array.isArray(seats) || seats.length === 0 ||
-      typeof block.userData.mapOutline !== "string") {
-    console.error('Arena block "' + blockId + '" has invalid seat data.');
-    return;
-  }
-
-  currentBlockId = blockId;
-  seatView = false;
-  orbitMode = false;
-  seatViewBack.hidden = true;
-  seatMap.hidden = false;
-  seatMap.classList.add("is-detail");
-
-  const outline = block.userData.mapOutline;
-  const outlinePoints = outline.split(" ").map((point) => point.split(",").map(Number));
-  const allX = [...outlinePoints.map((point) => point[0]), ...seats.map((seat) => seat.mapX)];
-  const allY = [...outlinePoints.map((point) => point[1]), ...seats.map((seat) => seat.mapY)];
-  const blockMinX = Math.min(...allX);
-  const blockMaxX = Math.max(...allX);
-  const blockMinY = Math.min(...allY);
-  const blockMaxY = Math.max(...allY);
-  const padding = 50;
-  const minX = blockMinX - padding;
-  const minY = blockMinY - padding;
-  const width = blockMaxX - blockMinX + padding * 2;
-  const height = blockMaxY - blockMinY + padding * 2;
-  const courtSide = block.userData.courtSide;
-  const centerX = (blockMinX + blockMaxX) / 2;
-  const centerY = (blockMinY + blockMaxY) / 2;
-  let courtSideLabel;
-  if (courtSide === "bottom") {
-    courtSideLabel = '<text class="court-side-label" x="' + centerX + '" y="' +
-      (blockMaxY + 12) + '">コート側 ↓</text>';
-  } else if (courtSide === "top") {
-    courtSideLabel = '<text class="court-side-label" x="' + centerX + '" y="' +
-      (blockMinY - 9) + '">↑ コート側</text>';
-  } else if (courtSide === "right") {
-    courtSideLabel = '<text class="court-side-label" x="' + (blockMaxX + 12) + '" y="' +
-      centerY + '">コート側 →</text>';
-  } else {
-    courtSideLabel = '<text class="court-side-label" x="' + (blockMinX - 12) + '" y="' +
-      centerY + '">← コート側</text>';
-  }
-  const seatDots = seats.map((seat, index) =>
-    '<circle class="seat-marker" data-seat-index="' + index + '" cx="' + seat.mapX +
-    '" cy="' + seat.mapY + '" r="2.5"><title>' + seat.seatId + '</title></circle>'
-  ).join("");
-
-  seatMap.innerHTML =
-    '<div class="seat-map-header">' +
-      '<button class="map-back" type="button">← ブロック図</button>' +
-      '<strong>' + blockId + ' の座席</strong>' +
-      '<span>' + seats.length + '席</span>' +
-    '</div>' +
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + minX + " " + minY + " " +
-      width + " " + height + '" role="group" aria-label="' +
-      blockId + 'の座席一覧。コート側を表示">' +
-      '<polygon class="detail-block" points="' + outline + '" />' +
-      '<g>' + seatDots + '</g>' +
-      courtSideLabel +
-    '</svg>';
-
-  seatMap.querySelector(".map-back").addEventListener("click", showOverview);
-  seatMap.querySelectorAll("[data-seat-index]").forEach((seatElement) => {
-    seatElement.addEventListener("click", () => {
-      const seat = seats[Number(seatElement.dataset.seatIndex)];
-      showSeatView(seat);
-    });
-  });
-  updateOrbitButton();
-}
-
-function showSeatView(seat) {
-  if (!seat || !seat.cameraPosition || !seat.cameraPosition.isVector3 ||
-      !seat.cameraTarget || !seat.cameraTarget.isVector3) {
-    console.error('Seat "' + (seat && seat.seatId || "unknown") +
-      '" has invalid camera vectors.');
-    return;
-  }
-
-  seatView = true;
-  seatMap.hidden = true;
-  seatViewBack.hidden = false;
-  orbitMode = false;
-  cameraGoal.copy(seat.cameraPosition);
-  targetGoal.copy(seat.cameraTarget);
-  cameraStart.copy(camera.position);
-  targetStart.copy(controls.target);
-  moveStartedAt = performance.now();
-  movingToSeat = true;
-  updateOrbitButton();
-}
-
-seatViewBack.addEventListener("click", () => {
-  if (currentBlockId) showBlockDetail(currentBlockId);
-  else showOverview();
-  updateOrbitButton();
-});
-
-function readVector3(value, label) {
-  if (!Array.isArray(value) || value.length !== 3 ||
-      !value.every(Number.isFinite)) {
-    throw new Error('Arena metadata "' + label +
-      '" must be an array of three finite numbers.');
-  }
-  return new THREE.Vector3(...value);
-}
-
-function validateArenaAndMap(arenaRoot, metadata, svgText) {
-  if (!metadata || metadata.formatVersion !== 1) {
-    throw new Error("The arena module must provide userData.arena with formatVersion 1.");
-  }
-  if (!Number.isFinite(metadata.floorTopY)) {
-    throw new Error("Arena metadata must provide a finite floorTopY.");
-  }
-  const isFiniteArray = (value, length) =>
-    Array.isArray(value) && value.length === length && value.every(Number.isFinite);
-  if (!metadata.court || !isFiniteArray(metadata.court.center, 3) ||
-      !isFiniteArray(metadata.court.size, 2) ||
-      metadata.court.size.some((value) => value <= 0) ||
-      !Number.isFinite(metadata.court.surfaceY) || !metadata.map ||
-      !isFiniteArray(metadata.map.viewBox, 4) ||
-      metadata.map.viewBox[2] <= 0 || metadata.map.viewBox[3] <= 0 ||
-      !isFiniteArray(metadata.map.svgCenter, 2) ||
-      !isFiniteArray(metadata.map.worldCenter, 2) ||
-      !Number.isFinite(metadata.map.unitsPerMetre) ||
-      metadata.map.unitsPerMetre <= 0) {
-    throw new Error("Arena metadata must provide court and map dimensions.");
-  }
-
-  const initialPosition = readVector3(metadata.initialView && metadata.initialView.position,
-    "initialView.position");
-  const initialTarget = readVector3(metadata.initialView && metadata.initialView.target,
-    "initialView.target");
-  const modelBlocks = new Map();
-  arenaRoot.traverse((object) => {
-    const id = object.userData.blockId;
-    if (typeof id !== "string") return;
-    if (modelBlocks.has(id)) throw new Error('Duplicate 3D block ID "' + id + '".');
-    const outlinePoints = typeof object.userData.mapOutline === "string"
-      ? object.userData.mapOutline.trim().split(/\s+/)
-        .map((point) => point.split(",").map(Number))
-      : [];
-    if (outlinePoints.length < 3 ||
-        outlinePoints.some((point) => point.length !== 2 || !point.every(Number.isFinite)) ||
-        !["top", "right", "bottom", "left"].includes(object.userData.courtSide) ||
-        !Array.isArray(object.userData.seats) || object.userData.seats.length === 0) {
-      throw new Error('3D block "' + id + '" is missing required block data.');
-    }
-    const seatIds = new Set();
-    for (const seat of object.userData.seats) {
-      if (typeof seat.seatId !== "string" ||
-          !Number.isFinite(seat.mapX) || !Number.isFinite(seat.mapY) ||
-          !seat.cameraPosition || !seat.cameraPosition.isVector3 ||
-          !seat.cameraTarget || !seat.cameraTarget.isVector3 ||
-          !seat.cameraPosition.toArray().every(Number.isFinite) ||
-          !seat.cameraTarget.toArray().every(Number.isFinite) ||
-          seatIds.has(seat.seatId)) {
-        throw new Error('3D block "' + id + '" contains an invalid seat.');
-      }
-      seatIds.add(seat.seatId);
-    }
-    modelBlocks.set(id, object);
-  });
-  if (modelBlocks.size === 0) throw new Error("The arena module contains no selectable blocks.");
-
-  const svgDocument = new DOMParser().parseFromString(svgText, "image/svg+xml");
-  if (svgDocument.querySelector("parsererror")) throw new Error("The seat map is not valid SVG.");
-  const svgRoot = svgDocument.documentElement;
-  if (svgRoot.localName !== "svg") throw new Error("The seat map root element must be <svg>.");
-  const viewBox = (svgRoot.getAttribute("viewBox") || "").trim().split(/[\s,]+/).map(Number);
-  if (viewBox.length !== 4 || !viewBox.every(Number.isFinite) ||
-      viewBox.some((value, index) => value !== metadata.map.viewBox[index])) {
-    throw new Error("The SVG viewBox must match arena metadata map.viewBox.");
-  }
-
-  const svgBlocks = [...svgRoot.querySelectorAll("[data-block]")];
-  const svgIds = svgBlocks.map((element) => element.getAttribute("data-block"));
-  if (svgIds.some((id) => !id) || new Set(svgIds).size !== svgIds.length) {
-    throw new Error("Every SVG block must have a unique data-block ID.");
-  }
-  if (svgIds.length !== modelBlocks.size || svgIds.some((id) => !modelBlocks.has(id))) {
-    throw new Error("SVG data-block IDs must match 3D block IDs exactly.");
-  }
-  return { initialPosition, initialTarget };
-}
-
-async function loadArena() {
-  try {
-    const configUrl = new URL(ARENA_CONFIG_URL, window.location.href);
-    const configResponse = await fetch(configUrl);
-    if (!configResponse.ok) {
-      throw new Error("Arena config load failed: " + configResponse.status);
-    }
-    const config = await configResponse.json();
-    if (config.formatVersion !== 1 || typeof config.arenaId !== "string" ||
-        typeof config.name !== "string" || typeof config.module !== "string" ||
-        typeof config.seatMap !== "string") {
-      throw new Error("Arena config must provide formatVersion, arenaId, name, module, and seatMap.");
-    }
-    requestedArenaName = config.name;
-
-    const moduleUrl = new URL(config.module, configUrl);
-    const seatMapUrl = new URL(config.seatMap, configUrl);
-    const arenaModule = await import(moduleUrl.href);
-    if (typeof arenaModule.createArena !== "function") {
-      throw new Error("Arena module must export createArena(scene).");
-    }
-    model = arenaModule.createArena(scene);
-    if (!model || !model.isObject3D) {
-      throw new Error("createArena(scene) must return a Three.js Object3D.");
-    }
-    arenaMetadata = model.userData.arena;
-
-    const svgResponse = await fetch(seatMapUrl);
-    if (!svgResponse.ok) throw new Error("Seat map load failed: " + svgResponse.status);
-    originalSeatMapSvg = await svgResponse.text();
-
-    const view = validateArenaAndMap(model, arenaMetadata, originalSeatMapSvg);
-    initialCameraPosition = view.initialPosition;
-    initialCameraTarget = view.initialTarget;
-    camera.position.copy(initialCameraPosition);
-    controls.target.copy(initialCameraTarget);
-    camera.lookAt(controls.target);
+function loadModel() {
+  new GLTFLoader().load(MODEL_URL, (gltf) => {
+    model = gltf.scene;
+    scene.add(model);
+    const bounds = new THREE.Box3().setFromObject(model);
+    const size = bounds.getSize(new THREE.Vector3());
+    const center = bounds.getCenter(new THREE.Vector3());
+    const distance = Math.max(size.x, size.z) * 0.9;
+    controls.target.copy(center);
+    camera.position.set(center.x + distance, center.y + distance * 0.45, center.z + distance);
+    camera.far = Math.max(size.length() * 4, 1000);
+    camera.updateProjectionMatrix();
+    camera.lookAt(center);
     controls.update();
-    if (typeof config.name === "string") {
-      document.title = config.name + " - 座席からの見え方";
-    }
-
     arenaReady = true;
-    showOverview();
-  } catch (error) {
-    console.error("アリーナを読み込めませんでした。", error);
-    seatMap.hidden = false;
-    seatMap.textContent = requestedArenaName + "を読み込めませんでした: " + error.message;
-    updateOrbitButton();
-  }
+    updateControlsUi();
+  }, undefined, (error) => showMapError(new Error(`test.glb の読み込みに失敗しました: ${error.message || error}`)));
 }
-
-const light = new THREE.DirectionalLight(0xffffff, 3);
-light.position.set(5, 8, 5);
-scene.add(light);
-scene.add(new THREE.AmbientLight(0xffffff, 1));
 
 window.addEventListener("resize", () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(innerWidth, innerHeight);
 });
-
 function animate() {
   requestAnimationFrame(animate);
   if (movingToSeat) {
-    const progress = Math.min((performance.now() - moveStartedAt) / 900, 1);
-    const eased = progress * progress * (3 - 2 * progress);
-    camera.position.lerpVectors(cameraStart, cameraGoal, eased);
-    controls.target.lerpVectors(targetStart, targetGoal, eased);
-    if (progress === 1) {
+    const t = Math.min((performance.now() - moveStartedAt) / 800, 1);
+    const eased = t * t * (3 - 2 * t);
+    camera.position.lerpVectors(moveStartPosition, seatPosition, eased);
+    controls.target.lerpVectors(moveStartTarget, seatTarget, eased);
+    camera.lookAt(controls.target);
+    if (t >= 1) {
       movingToSeat = false;
-      updateOrbitButton();
-      camera.lookAt(controls.target);
-      if (seatView) syncLookAngles();
-      else controls.update();
+      controls.enabled = false;
+      syncLookAngles();
+      updateControlsUi();
     }
   }
+  if (controls.enabled) controls.update();
   renderer.render(scene, camera);
 }
 
-updateOrbitButton();
+loadMap();
+loadModel();
+updateControlsUi();
 animate();
-loadArena();
