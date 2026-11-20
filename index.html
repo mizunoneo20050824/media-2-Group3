@@ -17,8 +17,8 @@
       display: grid;
       place-items: center;
       box-sizing: border-box;
-      width: min(360px, 40vw, 48vh);
-      aspect-ratio: 1;
+      width: min(900px, 75vw, 85vh);
+      aspect-ratio: 1.4;
       overflow: hidden;
       background: rgba(255, 255, 255, 0.92);
       border: 1px solid #c8d1da;
@@ -30,6 +30,29 @@
       width: 100%;
       height: 100%;
     }
+    #seat-map-container:not(.is-detail) svg {
+      transform: scaleY(-1);
+    }
+    .block-label {
+      fill: #102638;
+      stroke: #fff;
+      stroke-width: 3.5px;
+      stroke-linejoin: round;
+      paint-order: stroke;
+      font: 900 13px/1 system-ui, sans-serif;
+      pointer-events: none;
+    }
+    .block-star {
+      display: none;
+      fill: #e53935;
+      stroke: #ffd400;
+      stroke-width: 2.5px;
+      stroke-linejoin: round;
+      paint-order: stroke;
+      font: 700 40px/1 system-ui, sans-serif;
+      pointer-events: none;
+    }
+    .block-star.visible { display: block; }
     #seat-map-container[hidden], #seat-view-back[hidden] {
       display: none;
     }
@@ -95,6 +118,9 @@
       pointer-events: none;
     }
     @media (max-width: 600px) {
+      #seat-map-container:not(.is-detail) {
+        width: min(96vw, 82vh);
+      }
       #seat-map-container.is-detail {
         width: 96vw;
         height: 86vh;
